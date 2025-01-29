@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Abenteuer</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        canvas { background: #8FBC8F; image-rendering: pixelated; border: 2px solid black; }
+        #info { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Pixel Abenteuer</h1>
+    <canvas id="gameCanvas"></canvas>
+    <div id="info">Münzen gesammelt: <span id="score">0</span></div>
+
+    <script>
+        const tileSize = 32;
+        const rows = 20;
+        const cols = 20;
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = cols * tileSize;
+        canvas.height = rows * tileSize;
+
+        let player = { x: 1, y: 1 };
+        let score = 0;
+        let map = [];
+        let coins = [];
+        let enemies = [];
+
+        function generateMap() {
+            for (let y = 0; y < rows; y++) {
+                map[y] = [];
+                for (let x = 0; x < cols; x++) {
+                    map[y][x] = Math.random() < 0.1 ? "rock" : "grass";
+                }
+            }
+            map[1][1] = "grass"; // Spieler Startposition
+            placeCoins(10);
+            placeEnemies(3);
+        }
+
+        function placeCoins(amount) {
+            for (let i = 0; i < amount; i++) {
+                let x, y;
+                do {
+                    x = Math.floor(Math.random() * cols);
+                    y = Math.floor(Math.random() * rows);
+                } while (map[y][x] !== "grass" || (x === 1 && y === 1));
+                coins.push({ x, y });
+            }
+        }
+
+        function placeEnemies(amount) {
+            for (let i = 0; i < amount; i++) {
+                let x, y;
+                do {
+                    x = Math.floor(Math.random() * cols);
+                    y = Math.floor(Math.random() * rows);
+                } while (map[y][x] !== "grass" || (x === 1 && y === 1));
+                enemies.push({ x, y, direction: Math.random() > 0.5 ? 1 : -1 });
+            }
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    ctx.fillStyle = map[y][x] === "rock" ? "#555" : "#7CFC00";
+                    ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                }
+            }
+
+            ctx.fillStyle = "gold";
+            coins.forEach(coin => ctx.fillRect(coin.x * tileSize + 8, coin.y * tileSize + 8, 16, 16));
+
+            ctx.fillStyle = "red";
+            enemies.forEach(enemy => ctx.fillRect(enemy.x * tileSize + 4, enemy.y * tileSize + 4, 24, 24));
+
+            ctx.fillStyle = "blue";
+            ctx.fillRect(player.x * tileSize + 4, player.y * tileSize + 4, 24, 24);
+        }
+
+        function movePlayer(dx, dy) {
+            let newX = player.x + dx;
+            let newY = player.y + dy;
+            if (newX >= 0 && newX < cols && newY >= 0 && newY < rows && map[newY][newX] !== "rock") {
+                player.x = newX;
+                player.y = newY;
+                checkCoinCollision();
+                checkEnemyCollision();
+            }
+            drawGame();
+        }
+
+        function checkCoinCollision() {
+            coins = coins.filter(coin => {
+                if (coin.x === player.x && coin.y === player.y) {
+                    score++;
+                    document.getElementById("score").textContent = score;
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function checkEnemyCollision() {
+            enemies.forEach(enemy => {
+                if (enemy.x === player.x && enemy.y === player.y) {
+                    alert("Spiel verloren!");
+                    location.reload();
+                }
+            });
+        }
+
+        function moveEnemies() {
+            enemies.forEach(enemy => {
+                let newX = enemy.x + enemy.direction;
+                if (newX < 0 || newX >= cols || map[enemy.y][newX] === "rock") {
+                    enemy.direction *= -1;
+                } else {
+                    enemy.x = newX;
+                }
+            });
+            drawGame();
+        }
+
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowUp") movePlayer(0, -1);
+            if (e.key === "ArrowDown") movePlayer(0, 1);
+            if (e.key === "ArrowLeft") movePlayer(-1, 0);
+            if (e.key === "ArrowRight") movePlayer(1, 0);
+        });
+
+        generateMap();
+        drawGame();
+        setInterval(moveEnemies, 500);
+    </script>
+</body>
+</html>
